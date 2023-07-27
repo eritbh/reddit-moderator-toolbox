@@ -5,6 +5,8 @@ import copy from 'rollup-plugin-copy';
 import {nodeResolve} from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
+import svelte from 'rollup-plugin-svelte';
+import autoPreprocess from 'svelte-preprocess';
 
 // TODO: Pull entry point info and copied files from manifest itself
 export default ['chrome', 'firefox'].flatMap(platform => [
@@ -18,6 +20,9 @@ export default ['chrome', 'firefox'].flatMap(platform => [
         plugins: [
             nodeResolve(),
             commonjs(),
+            svelte({
+                preprocess: autoPreprocess(),
+            }),
             typescript(),
             // Copy files not processed by Rollup over to the build directory
             copy({

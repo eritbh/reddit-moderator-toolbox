@@ -359,3 +359,9 @@ async function doSettingsUpdates () {
     TBListener.start();
     TBCore.watchForURLChanges();
 })();
+
+// test shit
+import App from './components/App.svelte';
+new App({
+    target: document.body, // whatever lol
+});
