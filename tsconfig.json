@@ -16,5 +16,8 @@
 		"noEmitOnError": true,
 		// get Svelte runtime types to allow .svelte imports in Typescript files
 		"types": ["svelte"],
-	}
+	},
+	"exclude": [
+		"**/node_modules/**/*",
+	]
 }

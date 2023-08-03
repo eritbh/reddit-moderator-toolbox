@@ -9,6 +9,7 @@ import * as TBHelpers from './tbhelpers.js';
 import * as TBCore from './tbcore.js';
 
 import {icons} from './tbconstants';
+import Pager from './components/Pager.svelte';
 export {icons};
 
 const logger = TBLog('TBui');
@@ -1738,90 +1739,17 @@ export function makeCommentThread (jsonInput, commentOptions) {
  */
 // TODO: optionally support caching calls to the content function to avoid wasting time regenerating identical pages
 export function pager ({pageCount, controlPosition = 'top'}, contentFunction) {
-    // Create elements for the content view and the pagination controls
-    const $pagerContent = $('<div class="tb-pager-content"/>');
-    const $pagerControls = $('<div class="tb-pager-controls"/>');
-
-    // An array of all the button elements that could be displayed, one for each page
-    const buttons = [];
-
-    // A function that refreshes the displayed buttons based on the selected page
-    function loadPage (pageIndex) {
-        // If we have more than 10 pages, refresh the buttons that are being actively displayed
-        if (pageCount > 10) {
-            // Empty the existing buttons out, using .detach to maintain event listeners, then using .empty() to
-            // remove the text left behind (thanks jQuery)
-            $pagerControls.children().detach();
-            $pagerControls.empty();
-
-            // Add the buttons in the center
-            const leftBound = Math.max(pageIndex - 4, 0);
-            const rightBound = Math.min(pageIndex + 4, pageCount - 1);
-            for (let buttonIndex = leftBound; buttonIndex <= rightBound; buttonIndex += 1) {
-                $pagerControls.append(buttons[buttonIndex]);
-            }
-
-            // Add the first and last page buttons, along with "..." between them and the other buttons if there's
-            // distance between them
-            if (leftBound > 1) {
-                $pagerControls.prepend('...');
-            }
-            if (leftBound > 0) {
-                $pagerControls.prepend(buttons[0]);
-            }
-            if (rightBound < pageCount - 2) {
-                $pagerControls.append('...');
-            }
-            if (rightBound < pageCount - 1) {
-                $pagerControls.append(buttons[pageCount - 1]);
-            }
-        } else if ($pagerControls.children().length === 0) {
-            // If we have less than 10 items, then we only need to refresh the buttons the first time they're loaded
-            buttons.forEach($button => $pagerControls.append($button));
-        }
-
-        // Move selection to the correct button
-        $pagerControls.children().toggleClass('tb-pager-control-active', false);
-        buttons[pageIndex].toggleClass('tb-pager-control-active', true);
-
-        // Generate and display content for the new page
-        /**
-         * @callback TBui~pagerCallback
-         * @param {number} page The zero-indexed number of the page to generate
-         * @returns {string | jQuery} The content of the page
-         */
-        $pagerContent.empty().append(contentFunction(pageIndex));
-    }
-
-    // Create all the buttons
-    for (let page = 0; page < pageCount; page += 1) {
-        // Create the button, translating 0-indexed to 1-indexed pages fur human eyes
-        const $button = $(button(page + 1, 'tb-pager-control'));
-
-        // When the button is clicked, go to the correct page
-        $button.on('click', () => {
-            loadPage(page);
-        });
-
-        // Add to the array
-        buttons.push($button);
-    }
-
-    // Construct the pager itself
-    const $pager = $('<div class="tb-pager"/>');
-    $pager.append($pagerContent);
-    if (controlPosition === 'top') {
-        $pager.prepend($pagerControls);
-    } else if (controlPosition === 'bottom') {
-        $pager.append($pagerControls);
-    } else {
-        throw new TypeError('Invalid controlPosition');
-    }
-
-    // Preload the content for the first page
-    loadPage(0);
-
-    return $pager;
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('tb-pager-svelte-mount')
+    new Pager({
+        props: {
+            controlPosition,
+            pageCount,
+            contentFunction,
+        },
+        target: wrapper,
+    });
+    return $(wrapper);
 }
 
 /**
@@ -1854,7 +1782,7 @@ export function pagerForItems ({
         for (let i = start; i < end && i < items.length; i += 1) {
             $wrapper.append(displayItem(items[i], i));
         }
-        return $wrapper;
+        return $wrapper[0].outerHTML;
     });
 }
 
