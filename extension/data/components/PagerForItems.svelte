@@ -1,10 +1,12 @@
-<script>
-    import Pager from "./Pager.svelte";
+<script lang="ts" generics="Item">
+	import Pager from "./Pager.svelte";
 
-	export let items = [];
-	export let itemsPerPage;
+	type ContentFunction = (item: Item, index: number) => string;
+
+	export let items: Item[] = [];
+	export let itemsPerPage: number;
 	export let wrapper = 'div';
-	export let contentFunction
+	export let contentFunction: ContentFunction | null = null;
 </script>
 
 <Pager
@@ -18,7 +20,9 @@
 		) as item, indexInPage}
 			{@const i = (pageIndex * itemsPerPage) + indexInPage}
 			<slot {item} {i}>
-				{@html contentFunction(item, i)}
+				{#if contentFunction}
+					{@html contentFunction(item, i)}
+				{/if}
 			</slot>
 		{/each}
 	</svelte:element>

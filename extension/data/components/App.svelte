@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import PagerForItems from "./PagerForItems.svelte";
 </script>
 

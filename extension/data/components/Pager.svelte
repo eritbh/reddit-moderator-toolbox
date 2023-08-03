@@ -1,7 +1,7 @@
-<script>
+<script lang="ts">
 	import PagerButton from "./PagerButton.svelte";
 
-	export let pageCount;
+	export let pageCount: number;
 
 	let currentPageIndex = 0;
 </script>
@@ -15,7 +15,7 @@
 	<div class="pager-controls">
 		{#each {length: pageCount} as _, i}
 			<PagerButton
-				label={i+1}
+				label={''+(i+1)}
 				active={currentPageIndex === i}
 				on:click={() => currentPageIndex = i}
 			/>

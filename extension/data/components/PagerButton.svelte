@@ -1,9 +1,7 @@
-<script>
-	/** @type {string} */
-	export let label;
+<script lang="ts">
+	export let label: string;
 
-	/** @type {boolean} */
-	export let active;
+	export let active: boolean;
 </script>
 
 <button
