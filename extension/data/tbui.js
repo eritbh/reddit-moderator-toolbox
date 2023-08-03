@@ -8,8 +8,9 @@ import * as TBApi from './tbapi.ts';
 import * as TBHelpers from './tbhelpers.js';
 import * as TBCore from './tbcore.js';
 
-import {icons} from './tbconstants';
 import Pager from './components/Pager.svelte';
+
+import {icons} from './tbconstants';
 export {icons};
 
 const logger = TBLog('TBui');
@@ -1740,7 +1741,7 @@ export function makeCommentThread (jsonInput, commentOptions) {
 // TODO: optionally support caching calls to the content function to avoid wasting time regenerating identical pages
 export function pager ({pageCount, controlPosition = 'top'}, contentFunction) {
     const wrapper = document.createElement('div');
-    wrapper.classList.add('tb-pager-svelte-mount')
+    wrapper.classList.add('tb-pager-svelte-mount');
     new Pager({
         props: {
             controlPosition,

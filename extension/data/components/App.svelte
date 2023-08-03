@@ -1,5 +1,5 @@
 <script lang="ts">
-    import PagerForItems from "./PagerForItems.svelte";
+    import PagerForItems from './PagerForItems.svelte';
 </script>
 
 <div class="what">

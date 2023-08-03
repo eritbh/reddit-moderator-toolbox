@@ -1,5 +1,5 @@
 <script lang="ts" generics="Item">
-	import Pager from "./Pager.svelte";
+	import Pager from './Pager.svelte';
 
 	type ContentFunction = (item: Item, index: number) => string;
 

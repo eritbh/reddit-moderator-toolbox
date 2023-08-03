@@ -6,7 +6,7 @@
 </script>
 
 <script lang="ts">
-	import PagerButton from "./PagerButton.svelte";
+	import PagerButton from './PagerButton.svelte';
 
 	export let pageCount: number;
 	export let controlPosition = ControlPosition.Bottom;
