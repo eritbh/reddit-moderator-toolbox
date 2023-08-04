@@ -8,7 +8,7 @@ import * as TBApi from './tbapi.ts';
 import * as TBHelpers from './tbhelpers.js';
 import * as TBCore from './tbcore.js';
 
-import Pager from './components/Pager.svelte';
+import Pager from './components/pager/Pager.svelte';
 
 import {icons} from './tbconstants';
 export {icons};
