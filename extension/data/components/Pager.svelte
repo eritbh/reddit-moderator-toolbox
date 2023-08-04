@@ -48,3 +48,15 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+.tb-pager-controls {
+    text-align: center;
+    margin-bottom: 5px;
+}
+/* if controls are on the bottom, use top margin instead */
+.tb-pager-content + .tb-pager-controls {
+    margin-bottom: 0;
+    margin-top: 5px;
+}
+</style>

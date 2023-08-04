@@ -11,3 +11,9 @@
 >
 	{label}
 </button>
+
+<style>
+.tb-general-button.tb-pager-control-active {
+    background-color: #B6C9DD;
+}
+</style>
