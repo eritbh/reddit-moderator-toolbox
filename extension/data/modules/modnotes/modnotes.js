@@ -1,23 +1,15 @@
 import $ from 'jquery';
 
-import {Module} from '../tbmodule.js';
-import {link, isModSub, isNewModmail} from '../tbcore.js';
-import {escapeHTML, htmlEncode} from '../tbhelpers.js';
-import * as TBApi from '../tbapi.ts';
-import {
-    drawPosition,
-    FEEDBACK_NEGATIVE,
-    FEEDBACK_POSITIVE,
-    icons,
-    pagerForItems,
-    popup,
-    relativeTime,
-    textFeedback,
-} from '../tbui.js';
-import TBListener from '../tblistener.js';
-import {setSettingAsync} from '../tbstorage.js';
-
+import {Module} from '../../tbmodule.js';
+import {isModSub, isNewModmail} from '../../tbcore.js';
+import {htmlEncode} from '../../tbhelpers.js';
+import * as TBApi from '../../tbapi.js';
+import {drawPosition} from '../../tbui.js';
+import TBListener from '../../tblistener.js';
+import {setSettingAsync} from '../../tbstorage.js';
 import {labelColors, labelNames, typeNames} from './constants.ts';
+
+import ModNotesWindow from './components/ModNotesWindow.svelte';
 
 // A queue of users and subreddits whose latest note will be fetched in the next
 // bulk call, alongside the associated resolve and reject functions so we can
@@ -101,69 +93,6 @@ function getLatestModNote (subreddit, user) {
 }
 
 /**
- * In-page cache of comment fullnames to the fullnames of their parent posts.
- * Values of this object are promises which resolve to fullnames, rather than
- * bare strings - we keep the promises around after they're resolved, and always
- * deal with this cache asynchronously.
- * @constant {Record<string, Promise<string>>}
- */
-const parentFullnamesCache = Object.create(null);
-
-/**
- * Gets the parent fullname of a comment.
- * @param {string} commentFullname Fullname of a comment
- * @returns {Promise<string>} Fullname of the comment's parent post
- */
-export function getParentFullname (commentFullname) {
-    // If it's in cache, return that
-    const cached = parentFullnamesCache[commentFullname];
-    if (cached) {
-        return cached;
-    }
-
-    // Fetch the parent fullname fresh
-    // Note that we're not awaiting this - we want the full promise
-    const parentFullnamePromise = TBApi.getInfo(commentFullname)
-        .then(info => info.data.parent_id);
-
-    // Write to cache and return
-    parentFullnamesCache[commentFullname] = parentFullnamePromise;
-    return parentFullnamePromise;
-}
-
-/**
- * Gets a link to the context item of a note.
- * @param {object} note A mod note object
- * @returns {Promise<string | null>} Resolves to a URL that points to the note's
- * context item, or `null` if there is none
- */
-async function getContextURL (note) {
-    const itemFullname = note.user_note_data?.reddit_id || note.mod_action_data?.reddit_id;
-
-    // Can't link to something that isn't there
-    if (!itemFullname) {
-        return null;
-    }
-
-    // Split fullname into type and ID
-    const [itemType, itemID] = itemFullname.split('_');
-
-    // Post links only require the ID of the post itself, which we have
-    if (itemType === 't3') {
-        return link(`/comments/${itemID}`);
-    }
-
-    // Comment links require the ID of their parent post, which we need to fetch
-    if (itemType === 't1') {
-        const parentFullname = await getParentFullname(itemFullname);
-        return link(`/comments/${parentFullname.replace('t3_', '')}/_/${itemID}`);
-    }
-
-    // This ID is for some other item type which we can't process
-    return null;
-}
-
-/**
  * Creates a mod note badge for the given information.
  * @param {object} data Data associated with the badge
  * @param {string} data.user Name of the relevant user
@@ -214,247 +143,6 @@ function updateModNotesBadge ($badge, note) {
             ${htmlEncode(note.user_note_data.note)}
         </b>
     `);
-}
-
-/**
- * Creates a mod note popup for the given information.
- * @param {object} data Data associated with the popup
- * @param {string} data.user Name of the relevant user
- * @param {string} data.subreddit Name of the relevant subreddit
- * @param {string} [data.contextID] Fullname of the item the popup was opened from, used to write note context
- * @param {object[]} [data.notes] Note objects for the user, or null/undefined
- * @returns {jQuery} The created popup
- */
-function createModNotesPopup ({
-    user,
-    subreddit,
-    contextID,
-    notes,
-    defaultTabName,
-    defaultNoteLabel,
-}) {
-    let defaultTabID = 'tb-modnote-tab-all';
-    if (defaultTabName === 'notes') {
-        defaultTabID = 'tb-modnote-tab-notes';
-    } else if (defaultTabName === 'actions') {
-        defaultTabID = 'tb-modnote-tab-actions';
-    }
-
-    const $popup = popup({
-        title: `Mod notes for /u/${user} in /r/${subreddit}`,
-        tabs: [
-            {
-                title: 'All Activity',
-                id: 'tb-modnote-tab-all',
-            },
-            {
-                title: 'Notes',
-                id: 'tb-modnote-tab-notes',
-            },
-            {
-                title: 'Mod Actions',
-                id: 'tb-modnote-tab-actions',
-            },
-        ],
-        footer: `
-            <form class="tb-modnote-create-form">
-                <select class="tb-action-button tb-modnote-label-select">
-                    <option
-                        value=""
-                        ${defaultNoteLabel === 'none' ? 'selected' : ''}
-                    >
-                        (no label)
-                    </option>
-                    ${Object.entries(labelNames).reverse().map(([value, name]) => `
-                        <option
-                            value="${htmlEncode(value)}"
-                            ${defaultNoteLabel === name.toLowerCase().replace(/\s/g, '_') ? 'selected' : ''}
-                        >
-                            ${htmlEncode(name)}
-                        </option>
-                    `).join('')}
-                </select>
-                <input
-                    type="text"
-                    class="tb-modnote-text-input tb-input"
-                    placeholder="Add a note..."
-                >
-                <button
-                    type="submit"
-                    class="tb-action-button"
-                >
-                    Create Note
-                </button>
-            </form>
-        `,
-        cssClass: 'tb-modnote-popup',
-        defaultTabID,
-    });
-    $popup.attr('data-user', user);
-    $popup.attr('data-subreddit', subreddit);
-    $popup.attr('data-context-id', contextID);
-
-    updateModNotesPopup($popup, {
-        notes,
-    });
-
-    return $popup;
-}
-
-/**
- * Updates a mod notes popup in place with the given information.
- * @param {jQuery} $popup The popup to update
- * @param {object} data
- * @param {object[]} [data.notes] Note objects for the user, or null/undefined
- */
-function updateModNotesPopup ($popup, {
-    notes,
-}) {
-    // Build a table for each tab containing the right subset of notes
-    $popup.find('.tb-window-tab').each(function () {
-        const $tabContainer = $(this);
-
-        const $content = $tabContainer.find('.tb-window-content');
-        $content.empty();
-
-        if (!notes) {
-            // Notes being null/undefined indicates notes couldn't be fetched
-            // TODO: probably pass errors into this function for display, and
-            //       also to distinguish "failed to load" from "still loading"
-            $content.append(`
-                <p class="error">
-                    Error fetching mod notes
-                </p>
-            `);
-            return;
-        }
-
-        // Filter notes as appropriate for this tab
-        let filteredNotes = notes;
-        if ($tabContainer.hasClass('tb-modnote-tab-notes')) {
-            filteredNotes = notes.filter(note => note.user_note_data?.note);
-        }
-        if ($tabContainer.hasClass('tb-modnote-tab-actions')) {
-            filteredNotes = notes.filter(note => note.mod_action_data?.action);
-        }
-
-        if (!filteredNotes.length) {
-            // If the notes list is empty, our job is very easy
-            $content.append(`
-                <p>
-                    No notes
-                </p>
-            `);
-        } else {
-            // Generate a table for the notes we have and display that
-            const $notesPager = pagerForItems({
-                items: filteredNotes,
-                perPage: 10,
-                controlPosition: 'bottom',
-                displayItem: generateNoteTableRow,
-                wrapper: `
-                    <table class="tb-modnote-table">
-                        <thead>
-                            <tr>
-                                <th>Author</th>
-                                <th>Type</th>
-                                <th>Details</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                    </table>
-                `,
-            });
-            $content.append($notesPager);
-        }
-    });
-}
-
-/**
- * Generates a table of the given notes.
- * @param {object} note A note object
- * @returns {jQuery} The generated table row
- */
-function generateNoteTableRow (note) {
-    const createdAt = new Date(note.created_at * 1000);
-    const mod = note.operator; // TODO: can [deleted] show up here?
-
-    const $noteRow = $(`
-        <tr>
-            <td>
-                <a href="${link(`/user/${encodeURIComponent(mod)}`)}">
-                    /u/${escapeHTML(mod)}
-                </a>
-                <br>
-                <small></small>
-            </td>
-            <td>
-                ${typeNames[note.type]}
-            </td>
-        </tr>
-    `);
-
-    // Add relative timestamp element
-    $noteRow.find('small').append(relativeTime(createdAt));
-
-    // Build the note details based on what sort of information is present
-    const $noteDetails = $('<td>');
-
-    if (note.mod_action_data?.action) {
-        $noteDetails.append(`
-            <span class="tb-modnote-action-summary">
-                Took action "${escapeHTML(note.mod_action_data.action)}"${note.mod_action_data.details ? ` (${escapeHTML(note.mod_action_data.details)})` : ''}${note.mod_action_data.description ? `: ${escapeHTML(note.mod_action_data.description)}` : ''}
-            </span>
-        `);
-    }
-
-    if (note.user_note_data?.note) {
-        $noteDetails.append(`
-            <blockquote>
-                ${note.user_note_data.label ? `
-                    <span style="color:${labelColors[note.user_note_data.label]}">
-                        [${labelNames[note.user_note_data.label] || escapeHTML(note.user_note_data.label)}]
-                    </span>
-                ` : ''}
-                ${escapeHTML(note.user_note_data.note)}
-            </blockquote>
-        `);
-    }
-
-    $noteRow.append($noteDetails);
-
-    // Only manually added notes can be deleted
-    if (note.type === 'NOTE') {
-        $noteRow.append(`
-            <td>
-                <a
-                    class="tb-modnote-delete-button tb-icons tb-icons-negative"
-                    role="button"
-                    title="Delete note"
-                    data-note-id="${escapeHTML(note.id)}"
-                >
-                    ${icons.delete}
-                </a>
-            </td>
-        `);
-    } else {
-        // append an empty td to avoid weird border stuff
-        $noteRow.append('<td>');
-    }
-
-    // Check for a context URL (which might need to be fetched) and add it to
-    // the timestamp if we get one
-    getContextURL(note).then(contextURL => {
-        if (!contextURL) {
-            return;
-        }
-
-        // the row may no longer be displayed at this point, but if it's gone
-        // then jQuery will just do nothing, so it's fine
-        $noteRow.find('time').wrap(`<a href="${escapeHTML(contextURL)}">`);
-    });
-
-    return $noteRow;
 }
 
 export default new Module({
@@ -538,23 +226,40 @@ export default new Module({
                 }
 
                 // Create, position, and display popup
-                const positions = drawPosition(clickEvent);
-                const $popup = createModNotesPopup({
-                    user: author,
-                    subreddit,
-                    notes,
-                    contextID,
-                    defaultTabName,
-                    defaultNoteLabel,
-                })
+                const mountEl = $('<div>')
+                    .addClass('tb-modnotes-popup-svelte-mount')
+                    // Position at the top of the document to set a consistent
+                    // anchor for the draggable window; ensure it's as wide as
+                    // the window to avoid early horizontal wrapping of the
+                    // window contents; make 0px high to avoid eating pointer
+                    // events
                     .css({
-                        top: positions.topPosition,
-                        left: positions.leftPosition,
+                        position: 'absolute',
+                        top: '0',
+                        left: '0',
+                        right: '0',
+                        height: '0',
                     })
                     .appendTo($('body'));
-
-                // Focus the note input
-                $popup.find('.tb-modnote-text-input').focus();
+                const positions = drawPosition(clickEvent);
+                const notesWindow = new ModNotesWindow({
+                    target: mountEl[0],
+                    props: {
+                        user: author,
+                        subreddit,
+                        notes,
+                        contextID,
+                        defaultTabName,
+                        defaultNoteLabel,
+                        initialTop: positions.topPosition,
+                        initialLeft: positions.leftPosition,
+                    },
+                });
+                // when the window close button is pressed, close it
+                notesWindow.$on('close', () => {
+                    notesWindow.$destroy();
+                    mountEl.remove();
+                });
             });
             $badge.appendTo($target);
         }
@@ -566,55 +271,6 @@ export default new Module({
             updateModNotesBadge($badge, note);
         } catch (error) {
             this.error(`Error fetching mod notes for /u/${author} in /r/${subreddit}:`, error);
-        }
-    });
-
-    const $body = $('body');
-
-    // Handle note creation
-    $body.on('submit', '.tb-modnote-create-form', async event => {
-        // don't actually perform the HTML form action
-        event.preventDefault();
-
-        const $popup = $(event.target).closest('.tb-modnote-popup');
-        const $textInput = $popup.find('.tb-modnote-text-input');
-        const $labelSelect = $popup.find('.tb-modnote-label-select');
-
-        try {
-            await TBApi.createModNote({
-                user: $popup.attr('data-user'),
-                subreddit: $popup.attr('data-subreddit'),
-                note: $textInput.val(),
-                label: $labelSelect.val() || undefined,
-                redditID: $popup.attr('data-context-id'),
-            });
-            $textInput.val('');
-            textFeedback('Note saved', FEEDBACK_POSITIVE);
-
-            // Close the popup after a successful save
-            $popup.remove();
-        } catch (error) {
-            this.error('Failed to create mod note:', error);
-            textFeedback('Failed to create mod note', FEEDBACK_NEGATIVE);
-        }
-    });
-
-    // Handle delete note button clicks
-    $body.on('click', '.tb-modnote-delete-button', async event => {
-        const $button = $(event.target);
-        const $popup = $button.closest('.tb-modnote-popup');
-
-        try {
-            await TBApi.deleteModNote({
-                user: $popup.attr('data-user'),
-                subreddit: $popup.attr('data-subreddit'),
-                id: $button.attr('data-note-id'),
-            });
-            $button.closest('tr').remove();
-            textFeedback('Note removed!', FEEDBACK_POSITIVE);
-        } catch (error) {
-            this.error('Failed to delete note:', error);
-            textFeedback('Failed to delete note', FEEDBACK_NEGATIVE);
         }
     });
 });
