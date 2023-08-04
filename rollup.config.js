@@ -20,11 +20,11 @@ export default ['chrome', 'firefox'].flatMap(platform => [
         plugins: [
             nodeResolve(),
             commonjs(),
+            typescript(),
             svelte({
                 preprocess: autoPreprocess(),
                 emitCss: false,
             }),
-            typescript(),
             // Copy files not processed by Rollup over to the build directory
             copy({
                 targets: [
