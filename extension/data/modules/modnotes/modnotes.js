@@ -17,56 +17,7 @@ import {
 import TBListener from '../tblistener.js';
 import {setSettingAsync} from '../tbstorage.js';
 
-/**
- * An object mapping modnote types to human-friendly display names.
- * @constant {object}
- */
-// NOTE: values of this object are not escaped before being inserted in HTML
-const typeNames = {
-    NOTE: 'Note',
-    APPROVAL: 'Approve',
-    REMOVAL: 'Remove',
-    BAN: 'Ban',
-    MUTE: 'Mail Mute',
-    INVITE: 'Invite',
-    SPAM: 'Spam',
-    CONTENT_CHANGE: 'Update Post',
-    MOD_ACTION: 'Mod Action',
-};
-
-/**
- * An object mapping modnote labels to display colors. All colors are from
- * the default Toolbox usernote type colors, except the HELPFUL_USER label
- * which doesn't have an analogue in Toolbox usernotes.
- * @constant {object}
- */
-// NOTE: values of this object are not escaped before being inserted in HTML
-const labelColors = {
-    BOT_BAN: 'black',
-    PERMA_BAN: 'darkred',
-    BAN: 'red',
-    ABUSE_WARNING: 'orange',
-    SPAM_WARNING: 'purple',
-    SPAM_WATCH: 'fuchsia',
-    SOLID_CONTRIBUTOR: 'green',
-    HELPFUL_USER: 'lightseagreen',
-};
-
-/**
- * An object mapping modnote lavels to human-friendly display names.
- * @constant {object}
- */
-// NOTE: values of this object are not escaped before being inserted in HTML
-const labelNames = {
-    BOT_BAN: 'Bot Ban',
-    PERMA_BAN: 'Permaban',
-    BAN: 'Ban',
-    ABUSE_WARNING: 'Abuse Warning',
-    SPAM_WARNING: 'Spam Warning',
-    SPAM_WATCH: 'Spam Watch',
-    SOLID_CONTRIBUTOR: 'Solid Contributor',
-    HELPFUL_USER: 'Helpful User',
-};
+import {labelColors, labelNames, typeNames} from './constants.ts';
 
 // A queue of users and subreddits whose latest note will be fetched in the next
 // bulk call, alongside the associated resolve and reject functions so we can
